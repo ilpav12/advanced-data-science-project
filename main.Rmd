@@ -4,42 +4,45 @@ subtitle: "An insight into a research institute internal emailing"
 author: "Luca Pavan"
 date: "27/02/2024"
 output:
-  ioslides_presentation:
-    widescreen: true
+  revealjs::revealjs_presentation:
+    theme: moon
+    transition: fade
+    css: styles.css
+    fig_width: 8
+    fig_height: 4
+    reveal_options:
+          slideNumber: true
 ---
 
-## Overview
+# Overview
 
-- The network was generated using email data from a large European research institution.
+- The network was generated using **email data** from a large European research institution.
 - The data considered is only from communication between institution members.
-- An edge (u, v) in the network indicates an email sent from person u to person v.
-- Each node has a label indicating the research group to which the person belongs. In total, there are 42 research groups.
+- An edge (*u*, *v*) in the network indicates an email sent from person *u* to person *v*.
+- Each node has a label indicating the research group to which the person belongs. In total, there are **42 research groups**.
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache = TRUE, echo = TRUE)
+# knitr::opts_chunk$set(cache = TRUE, echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
 library(igraph)
-library(tidygraph)
-library(ggraph)
 library(tidyverse)
-library(ggplot2)
+skewness <- function(x) mean((x - mean(x))^3) / sd(x)^3
 ```
 
 ```{r load_data, include = FALSE}
-# Load the data
 edges <- read.table("data/edges.txt", col.names = c('from', 'to'))
 labels <- read.table("data/labels.txt", col.names = c('node', 'group'))
 labels$group <- labels$group + 1L
 df <- merge(edges, labels, by.x = 'from', by.y = 'node')
 
-# Create a graph object
 g <- graph_from_data_frame(edges, directed = TRUE)
 
-# Assign labels to the nodes
-V(g)$true_label <- labels$group
+labels_vector <- setNames(object = labels$group, nm = labels$node)
+V(g)$true_label <- labels_vector[as.character(V(g)$name)]
 ```
 
-```{r, echo = FALSE}
-V(g)$degree <- degree(g)
+```{r calc_degree, echo = FALSE}
+V(g)$degree <- degree(g, mode = "out")
 
 emails_mean <- mean(V(g)$degree)
 
@@ -48,11 +51,11 @@ emails_sd <- sd(V(g)$degree)
 emails_median <- median(V(g)$degree)
 ```
 
-## General numbers 1
+# General numbers
 
-- In total, there are `r vcount(g)` nodes and `r format(ecount(g), scientific=FALSE)` edges in the network.
+- In total, there are **`r vcount(g)` nodes** and **`r format(ecount(g), scientific=FALSE)` edges** in the network.
 - The number of emails sent by a person ranges from `r min(V(g)$degree)` to `r max(V(g)$degree)`.
-- On average, each person sends `r round(emails_mean, 2)` emails. The variation in the number of emails sent is `r round(emails_sd, 2)`. The middle value in the number of emails sent by each person is `r emails_median`.
+- On average, each person sends **`r round(emails_mean, 2)` emails**. The variation in the number of emails sent is `r round(emails_sd, 2)`. The middle value in the number of emails sent by each person is `r emails_median`.
 - By group, the top 5 groups with the lowest standard deviation in the number of emails sent are:
 
 ```{r degree_by, echo = FALSE}
@@ -63,13 +66,16 @@ df %>%
   head(5)
 ```
 
-## General numbers 2
+## General numbers
 
-- The degree distribution of the network is right-skewed, with a few nodes having a high degree and most nodes having a low degree.
+- The degree distribution of the network is right-skewed (`r round(skewness(V(g)$degree), 2)`), with a few nodes having a high degree and most nodes having a low degree.
 
 ```{r degree_distribution_graph, echo = FALSE}
+data_range <- range(V(g)$degree, na.rm = TRUE)
+step_size <- (data_range[2] - data_range[1]) / 25
+
 hist(V(g)$degree,
-     breaks = seq(0, round(max(V(g)$degree), -1), by = 25),
+     breaks = seq(data_range[1], data_range[2], by = step_size),
      main = "Degree Distribution",
      xlab = "Degree",
      ylab = "Frequency",
@@ -91,10 +97,10 @@ diameter <- diameter(g)
 average_path_length <- average.path.length(g)
 ```
 
-## Network spread
+# Network spread
 
-- The diameter of the network is `r diameter`. This is the longest of all the shortest paths in the network. This suggests that the research institution is relatively well-connected, as no researcher is more than 7 steps away from another.
-- The average path length of the network is `r round(average_path_length, 2)`. This is the average of all the shortest paths in the network. This suggests that the research institution is relatively well-connected, as the average distance between any two researchers is less than 3.
+- The **diameter** of the network is **`r diameter`**. This is the longest of all the shortest paths in the network. This suggests that the research institution is relatively well-connected, as no researcher is more than `r diameter` steps away from another.
+- The **average path length** of the network is **`r round(average_path_length, 2)`**. This is the average of all the shortest paths in the network. This suggests that the research institution is relatively well-connected, as the average distance between any two researchers is less than 3.
 - These metrics suggest that the research institution has a robust and efficient internal communication network, where information can be disseminated quickly and effectively among its researchers.
 
 ```{r centrality_measures, include = FALSE}
@@ -110,7 +116,7 @@ centrality_measures <- tibble(node = V(g)$name,
                               pagerank = V(g)$pagerank)
 ```
 
-## Centrality Measures 1
+# Centrality Measures 1
 
 - **Betweenness Centrality**: This measure indicates how often a node appears on the shortest paths between nodes in the network.
 - In the context of this email communication network, a person (node) with high betweenness centrality would be someone who connects different groups of people, acting as a bridge in the communication network.
@@ -118,7 +124,7 @@ centrality_measures <- tibble(node = V(g)$name,
 
 ## Centrality Measures 1
 
-The network's betweenness centrality distribution leans towards the right, in fact 90% of the nodes have a measure that is less than `r round(quantile(centrality_measures$betweenness, 0.9))` with a maximum value of `r format(max(centrality_measures$betweenness), scientific=FALSE)`.
+The network's betweenness centrality distribution leans towards the right (`r round(skewness(centrality_measures$betweenness), 2)`), in fact 90% of the nodes have a measure that is less than `r round(quantile(centrality_measures$betweenness, 0.9))` with a maximum value of `r format(max(centrality_measures$betweenness), scientific=FALSE)`.
 
 ```{r betweenness_distribution, echo = FALSE}
 data_range <- range(centrality_measures$betweenness, na.rm = TRUE)
@@ -133,7 +139,7 @@ abline(v = quantile(centrality_measures$betweenness, 0.9), col = "red", lwd = 2)
 legend("topright", legend = "90th Percentile", col = "red", lwd = 2)
 ```
 
-## Centrality Measures 2
+# Centrality Measures 2
 
 - **Closeness Centrality**: This measure indicates how close a node is to all other nodes in the network, calculated as the inverse of the sum of the shortest distances from a node to all other nodes.
 - In this context, a person with high closeness centrality can reach others more quickly and might be central in spreading information within the research institution.
@@ -154,7 +160,7 @@ hist(centrality_measures$closeness,
      col = "lightblue")
 ```
 
-## Centrality Measures 3
+# Centrality Measures 3
 
 - **Eigenvector Centrality**: This measure assigns relative scores to all nodes in the network based on the concept that connections to high-scoring nodes contribute more to the score of the node in question than equal connections to low-scoring nodes.
 - In this context, a person with high eigenvector centrality is someone who is connected to many people who themselves have high scores.
@@ -162,7 +168,7 @@ hist(centrality_measures$closeness,
 
 ## Centrality Measures 3
 
-- The distribution of eigenvector centrality in the network is right-skewed, with 75% of the nodes having a measure that is less than `r round(quantile(centrality_measures$eigenc, 0.75), 2)`.
+- The distribution of eigenvector centrality in the network is right-skewed (`r round(skewness(centrality_measures$eigenc), 2)`), with 75% of the nodes having a measure that is less than `r round(quantile(centrality_measures$eigenc, 0.75), 2)`.
 
 ```{r eigenvector_distribution, echo = FALSE}
 data_range <- range(centrality_measures$eigenc, na.rm = TRUE)
@@ -177,7 +183,7 @@ abline(v = quantile(centrality_measures$eigenc, 0.75), col = "red", lwd = 2)
 legend("topright", legend = "75th Percentile", col = "red", lwd = 2)
 ```
 
-## Centrality Measures 4
+# Centrality Measures 4
 
 - **PageRank**: Originally used by Google to rank websites in their search engine results, PageRank is a type of centrality measure that assigns a relative importance to each node in the network. It works by counting the number and quality of links to a node to determine a rough estimate of how important the node is.
 - In this context, a person with a high PageRank is considered important, not just based on the number of emails they send or receive, but also who those emails are with.
@@ -185,7 +191,7 @@ legend("topright", legend = "75th Percentile", col = "red", lwd = 2)
 
 ## Centrality Measures 4
 
-- The distribution of eigenvector centrality in the network is right-skewed, with 75% of the nodes having a measure that is less than `r round(quantile(centrality_measures$pagerank, 0.75), 4)`.
+- The distribution of eigenvector centrality in the network is right-skewed (`r round(skewness(centrality_measures$pagerank), 2)`), with 75% of the nodes having a measure that is less than `r round(quantile(centrality_measures$pagerank, 0.75), 4)`.
 
 ```{r pagerank_distribution, echo = FALSE}
 data_range <- range(centrality_measures$pagerank, na.rm = TRUE)
@@ -199,3 +205,65 @@ hist(centrality_measures$pagerank,
 abline(v = quantile(centrality_measures$pagerank, 0.75), col = "red", lwd = 2)
 legend("topright", legend = "75th Percentile", col = "red", lwd = 2)
 ```
+
+```{r community_structure, include = FALSE}
+community <- cluster_louvain(as.undirected(g))
+V(g)$community <- community$membership
+
+community_df <- tibble(node = character(),
+                       same_label_count = numeric(),
+                       total_count = numeric(),
+                       percentage = numeric(),
+                       community = numeric(),
+                       true_label = numeric())
+
+for (i in 1:vcount(g)) {
+  community_members <- V(g)[V(g)$community == V(g)$community[i]]
+  group_members <- V(g)[V(g)$true_label == V(g)$true_label[i]]
+  same_label_count <- length(intersect(group_members, community_members))
+  total_count <- length(group_members)
+  community_df <- community_df %>%
+    add_row(node = V(g)$name[i],
+            same_label_count = same_label_count,
+            total_count = total_count,
+            percentage = same_label_count / total_count * 100,
+            community = V(g)$community[i],
+            true_label = V(g)$true_label[i])
+}
+```
+
+# Community Structure
+
+- The network has been partitioned using the **Louvain method**, which is a multi-level optimization method of modularity. It works by assigning each node to the community that maximizes the gain in modularity and at each succeeding step it reassigns nodes to the community with which it achieves the highest contribution to modularity in a greedy way. It stops when no further improvement can be made.
+- This algorithm partitions the network into **`r max(community$membership)` communities** which are less than the number of groups in the network.
+- The **modularity** value calculated for the partition is **`r round(modularity(community), 2)`**, which indicates that the network has a relatively well-defined community structure.
+
+## Community Structure
+
+- For each node, the percentage of nodes with the same label in the community has been calculated, resulting in a distribution that is left-skewed (`r round(skewness(community_df$percentage), 2)`), with a mean of `r round(mean(community_df$percentage), 2)` and a median of `r round(median(community_df$percentage), 2)`.
+- This suggests that the community structure of the network is relatively well-defined, with most communities having a high percentage of nodes with the same label.
+
+```{r community_plot, echo = FALSE}
+hist(community_df$percentage,
+     breaks = seq(0, 100, by = 5),
+     main = "Community Structure",
+     xlab = "Percentage of Nodes with Same Label",
+     ylab = "Frequency",
+     col = "lightblue")
+
+abline(v = mean(community_df$percentage), col = "red", lwd = 2)
+abline(v = median(community_df$percentage), col = "green", lwd = 2)
+
+legend("topleft",
+       legend = c("Mean", "Median"),
+       col = c("red", "green"),
+       lwd = 2)
+```
+
+# Conclusion
+
+- The email communication network within the research institution is well-connected, with a high degree of efficiency in information dissemination.
+- The network's structure is relatively well-defined, with most communities having a high percentage of nodes with the same label.
+- The centrality measures reveal key individuals who play significant roles in the network, acting as bridges in communication, being strategically positioned, or having significant influence due to their connections.
+- The network's robustness and efficiency suggest a strong internal communication system within the research institution, which can potentially enhance collaborative efforts and productivity.
+

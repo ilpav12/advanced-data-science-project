@@ -1,0 +1,57 @@
+* {
+    font-family: 'Open Sans', Arial, sans-serif !important;
+}
+
+.reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+    text-transform: none !important;
+}
+
+section h1 {
+    font-size: 1.5em !important;
+}
+
+.reveal .slides {
+    text-align: start !important;
+}
+
+.subtitle {
+    font-size: 1em !important;
+    color: #93a1a1 !important;
+}
+
+.author, .date {
+    font-size: .5em !important;
+}
+
+section ul, section p {
+    font-size: .75em !important;
+}
+
+.reveal .controls .navigate-left.enabled {
+    border-right-color: #eee8d5 !important;
+}
+
+.reveal .controls .navigate-right.enabled {
+    border-left-color: #eee8d5 !important;
+}
+
+.reveal .controls .navigate-up.enabled {
+    border-bottom-color: #eee8d5 !important;
+}
+
+.reveal .controls .navigate-down.enabled {
+    border-top-color: #eee8d5 !important;
+}
+
+.reveal .progress span {
+    background: #eee8d5 !important;
+}
+
+::selection {
+    color: black !important;
+    background: #eee8d5 !important;
+}
+
+li + li {
+    margin-top: .5em !important;
+}
